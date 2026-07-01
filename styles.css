@@ -1,0 +1,17 @@
+* {
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
+    font-family: sans-serif;
+}
+
+.calcu-row {
+    display: flex;
+    gap: 10px;
+
+}
+
+.btn {
+    padding: 10px;
+    display: flex;
+}
