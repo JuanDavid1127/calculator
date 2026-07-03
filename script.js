@@ -1,108 +1,179 @@
 const BUTTONS = document.querySelectorAll(".btn");
+const VALID_KEYS = [
+    "1", "2", "3", "4", "5", "6", "7", "8", "9", "0",
+    "+", "-", "*", "/",
+    "=", ".", "C", "del",
+    "Enter", "Backspace", "Escape"
+]
 const MATH_OPERATORS = ["+", "-", "*", "/"];
-const SCREEN = document.querySelector(".calcu-screen");
+const screen = document.querySelector(".calcu-screen");
 let expression = [];
 
+document.addEventListener("keydown", handleInput);
 BUTTONS.forEach(btn => {
     btn.addEventListener("click", handleInput);
 })
 
-document.addEventListener("keydown", handleInput);
-
-function processInput(value) {
-
-    if(value === "Backspace") value = "C";
-    if(value === "Enter" || value === "=") value = "=";
-    if(value === ".") value = ".";
-
-    if(value === "C") {
-        clearDisplay();
-    } else if(MATH_OPERATORS.includes(value)) {
-        appendOrModifyExpression(value);
-    } else if(value === "=") {
-        calculate();
-    } else if(value === ".") {
-       appendDot(value);
-    } else {
-        expression.push(value);
-        SCREEN.textContent = expression.join("");
-    }
-}
-
 function handleInput(e) {
-    const VALID_KEYS = [
-        "1", "2", "3", "4", "5", "6", "7", "8", "9", "0",
-        "+", "-", "*", "/",
-        ".", "=",
-        "Backspace", "Enter"
-    ]
-    let value;
-
+    let input;
     if(e.type === "click") {
-        value = e.target.textContent;
-    } 
-    
-    if(e.type === "keydown") {
-        value = e.key;
+        input = e.target.textContent;
     }
 
-    if(!VALID_KEYS.includes(value)) {
+    if(e.type === "keydown") {
+        input = e.key;
+    }
+
+    if(input === "Enter") input = "=";
+    if(input === "Backspace") input = "del";
+    if(input === "Escape") input = "C";
+
+    if(!VALID_KEYS.includes(input)) {
         return;
     }
 
-   processInput(value);
+    processInput(input);
+}
+
+function processInput(input) {
+
+    if(input === "C") {
+        clearDisplay();
+    } else if (input === "del") {
+        removeLastChar();
+    } else if(input === "=") {
+        calculate();
+    } else if(input === ".") {
+        appendDot();
+    } else if (MATH_OPERATORS.includes(input)) {
+        appendOrModifyExpression(input);
+    } else {
+        appendToExpression(input);
+        updateDisplay();
+    }
+}
+
+function getOperatorIndex() {
+    return expression.findIndex(char => MATH_OPERATORS.includes(char));
+}
+
+function getFirstNumber() {
+    const operatorIndex = getOperatorIndex();
+    if(operatorIndex === -1) {
+        return expression;
+    }
+
+    return expression.slice(0, operatorIndex);
+}
+
+function getLastNumber() {
+    const operatorIndex = getOperatorIndex();
+    return expression.slice(operatorIndex + 1);
+}
+
+function appendOrModifyExpression(input) {
+    const operatorIndex = getOperatorIndex();
+    const firstNumber = getFirstNumber();
+    const lastNumber = getLastNumber();
+
+    if(operatorIndex !== -1) {
+        expression[operatorIndex] = input;
+    } else {
+        appendToExpression(input);
+    }
+
+    updateDisplay();
+}
+
+function removeLastChar() {
+    expression.pop();
+}
+
+function updateDisplay() {
+    screen.textContent = expression.join("");
+}
+
+function appendToExpression(input) {
+    expression.push(input);
 }
 
 function clearDisplay() {
     expression = [];
-    SCREEN.textContent = "";
+    screen.textContent = "";
 }
 
-function appendOrModifyExpression(value) {
-    const operatorIndex = expression.findIndex(char => MATH_OPERATORS.includes(char));
+function appendDot() {
+    const currentNumber = getCurrentNumber();
 
-    if(operatorIndex !== -1) {
-        expression[operatorIndex] = value;
-    } else {
-        expression.push(value);
+    if(currentNumber.includes(".")) {
+        return;
     }
-
-    SCREEN.textContent = expression.join("");
+    appendToExpression(".");
+    updateDisplay();
 }
 
-function appendDot(value) {
-    const operatorIndex = expression.findIndex(char => MATH_OPERATORS.includes(char));
-    const dotIndex = expression.includes(".");
+function getCurrentNumber() {
+    const operatorIndex = getOperatorIndex();
+    const firstNumber = getFirstNumber();
+    const lastNumber = getLastNumber();
 
+    return operatorIndex === -1 ? firstNumber : lastNumber;
 }
 
 function calculate() {
-    let output;
-    const operatorIndex = expression.findIndex(char => MATH_OPERATORS.includes(char));
+    const operatorIndex = getOperatorIndex();
     const operator = expression[operatorIndex];
+    const firstNumber = Number(
+        getFirstNumber().join("")
+    );
+    const lastNumber = Number(
+        getLastNumber().join("") 
+    );
+    let output;
 
-    const firstNumber = Number(expression.slice(0, operatorIndex).join(""));
-    const lastNumber = Number(expression.slice(operatorIndex + 1).join(""));
+    if(operatorIndex === -1) {
+        return;
+    }
+    if(lastNumber.length === 0) {
+        return;
+    }
 
     switch(operator) {
         case "+":
-            output = firstNumber + lastNumber;
+            output = addNumber(firstNumber, lastNumber);
             break;
         case "-":
-            output = firstNumber - lastNumber;
+            output = subtractNumber(firstNumber, lastNumber);
             break;
         case "*":
-            output = firstNumber * lastNumber;
+            output = multiplyNumber(firstNumber, lastNumber);
             break;
         case "/":
-            if(lastNumber === 0) {
-                SCREEN.textContent = "ERROR";
-                expression = []
-                return;
-            }
-            output = firstNumber / lastNumber;
+            output = divideNumber(firstNumber, lastNumber);
             break;
     }
-    SCREEN.textContent = output;
     expression = [String(output)];
+    updateDisplay();
+}
+
+function addNumber(firstNumber, lastNumber) {
+    return firstNumber + lastNumber;
+}
+
+function subtractNumber(firstNumber, lastNumber) {
+    return firstNumber - lastNumber;
+}
+
+function multiplyNumber(firstNumber, lastNumber) {
+    return firstNumber * lastNumber;
+}
+
+function divideNumber(firstNumber, lastNumber) {
+    if(lastNumber === 0) {
+        screen.textContent = "";
+        expression = [];
+        return null;
+    }
+
+    return firstNumber / lastNumber;
 }
